@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body style="margin:0">
+<title>Bảng Task Team</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky toolbar, workload strip of people, then a 4-lane board that stacks on phones */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --sunk:#e8ecf2; --line:#d5dce6;
+  --fg:#16202e; --muted:#5b6778; --accent:#1d5fd1; --accent-ink:#ffffff; --accent-soft:#e3ecfb;
+  --hi:#c2410c; --hi-soft:#fdeee5; --mid:#a16207; --mid-soft:#fbf3dc; --lo:#4b6a5a; --lo-soft:#e6efe9;
+  --late:#b42318; --done:#2f7d4f;
+  --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141b; --surface:#18202b; --sunk:#121922; --line:#2a3544;
+  --fg:#e4e9f0; --muted:#94a1b3; --accent:#6c9cf0; --accent-ink:#0b1220; --accent-soft:#1c2a42;
+  --hi:#fb8a55; --hi-soft:#3a2116; --mid:#e5b53d; --mid-soft:#352b12; --lo:#8fbba3; --lo-soft:#1b2a22;
+  --late:#f2776b; --done:#6fcf97; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --surface:#18202b; --sunk:#121922; --line:#2a3544;
+  --fg:#e4e9f0; --muted:#94a1b3; --accent:#6c9cf0; --accent-ink:#0b1220; --accent-soft:#1c2a42;
+  --hi:#fb8a55; --hi-soft:#3a2116; --mid:#e5b53d; --mid-soft:#352b12; --lo:#8fbba3; --lo-soft:#1b2a22;
+  --late:#f2776b; --done:#6fcf97; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding-block:12px;max-width:1400px;margin:0 auto}
+h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:12.5px}
+.grow{flex:1 1 auto}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.danger{color:var(--late)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{max-width:1400px;margin:0 auto;padding-block:16px 40px;display:grid;gap:16px}
+.notice{background:var(--mid-soft);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+/* workload */
+.people{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.pchip{flex:0 0 auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 5px;cursor:pointer}
+.pchip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex:0 0 auto}
+.pchip .n{font-weight:600}
+.pchip .c{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.pchip .c b{color:var(--late);font-weight:500}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input,.filters select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px}
+.filters input{min-width:0;flex:1 1 200px;max-width:320px}
+/* board */
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+@media (max-width:980px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.board{grid-template-columns:minmax(0,1fr)}}
+.lane{background:var(--sunk);border-radius:10px;padding:10px;display:grid;gap:8px;min-height:120px;border:1px solid transparent}
+.lane.over{border-color:var(--accent)}
+.lane h2{margin:0 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between}
+.lane h2 span{font-family:var(--f-mono)}
+.empty-lane{color:var(--muted);font-size:12.5px;padding:10px 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:8px;cursor:grab}
+.card:hover{border-color:var(--accent)}
+.card.dragging{opacity:.5}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.key{font-family:var(--f-mono);font-size:12px;color:var(--accent);text-decoration:none}
+a.key:hover{text-decoration:underline}
+.title{font-weight:500;overflow-wrap:anywhere;cursor:pointer}
+.pill{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px}
+.p-High{background:var(--hi-soft);color:var(--hi)}.p-Medium{background:var(--mid-soft);color:var(--mid)}.p-Low{background:var(--lo-soft);color:var(--lo)}
+.due{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.due.late{color:var(--late);font-weight:500}
+.assign{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto}
+.assign select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 6px;font-size:12.5px;min-width:0;max-width:100%;flex:1 1 auto}
+.mv{border:1px solid var(--line);background:var(--surface);border-radius:6px;width:28px;height:26px;cursor:pointer;color:var(--muted)}
+.mv:disabled{opacity:.35;cursor:default}
+.lane[data-s="Done"] .title{color:var(--muted)}
+.big-empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:28px 20px;text-align:center;display:grid;gap:10px;justify-items:center}
+.big-empty p{margin:0;color:var(--muted);max-width:52ch}
+/* modal */
+.scrim{position:fixed;inset:0;background:rgb(10 15 25 / .45);z-index:20;display:grid;place-items:center;padding:16px}
+.modal{background:var(--surface);border-radius:12px;border:1px solid var(--line);width:min(560px,100%);max-height:90vh;overflow:auto;padding:18px;display:grid;gap:12px}
+.modal h3{margin:0;font-size:16px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.fgrid{grid-template-columns:1fr}}
+.field{display:grid;gap:4px}.field.full{grid-column:1/-1}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%}
+.field textarea{min-height:70px;resize:vertical}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.actions .left{margin-right:auto}
+.mlist{display:grid;gap:6px}
+.mitem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.mitem span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:30;font-size:13px}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
+</style>
+
+<header class="wrap">
+  <div class="bar">
+    <div>
+      <h1>Bảng Task Team</h1>
+      <div class="sub" id="sub">Theo dõi task Jira và phân công người làm</div>
+    </div>
+    <div class="grow"></div>
+    <button class="btn" id="btnPeople" type="button">Thành viên</button>
+    <button class="btn primary" id="btnNew" type="button">+ Tạo task</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" id="notice" hidden></div>
+  <div class="people" id="people" aria-label="Khối lượng việc theo người"></div>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Tìm theo mã Jira hoặc tiêu đề…" aria-label="Tìm task">
+    <select id="fPri" aria-label="Lọc độ ưu tiên">
+      <option value="">Mọi độ ưu tiên</option><option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <select id="fDue" aria-label="Lọc hạn">
+      <option value="">Mọi hạn</option><option value="late">Quá hạn</option><option value="week">Đến hạn trong 7 ngày</option>
+    </select>
+    <button class="btn ghost" id="clearF" type="button">Bỏ lọc</button>
+  </div>
+  <div id="boardHost"></div>
+</main>
+
+<div class="scrim" id="taskModal" hidden>
+  <form class="modal" id="taskForm" autocomplete="off">
+    <h3 id="tmTitle">Tạo task</h3>
+    <div class="fgrid">
+      <div class="field"><label for="tKey">Mã Jira</label><input id="tKey" placeholder="VD: VOSA-142"></div>
+      <div class="field"><label for="tPri">Độ ưu tiên</label><select id="tPri"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+      <div class="field full"><label for="tTitle">Tiêu đề *</label><input id="tTitle" required placeholder="Việc cần làm"></div>
+      <div class="field"><label for="tAssignee">Giao cho</label><select id="tAssignee"></select></div>
+      <div class="field"><label for="tStatus">Trạng thái</label><select id="tStatus"></select></div>
+      <div class="field"><label for="tDue">Hạn chót</label><input id="tDue" type="date"></div>
+      <div class="field"><label for="tUrl">Link Jira</label><input id="tUrl" type="url" placeholder="https://…atlassian.net/browse/…"></div>
+      <div class="field full"><label for="tNote">Ghi chú</label><textarea id="tNote" placeholder="Bối cảnh, tiêu chí hoàn thành…"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn danger left" id="tDel" type="button" hidden>Xoá task</button>
+      <button class="btn" type="button" data-close>Huỷ</button>
+      <button class="btn primary" type="submit" id="tSave">Lưu</button>
+    </div>
+  </form>
+</div>
+
+<div class="scrim" id="peopleModal" hidden>
+  <form class="modal" id="peopleForm" autocomplete="off">
+    <h3>Thành viên</h3>
+    <div class="row">
+      <input id="pName" placeholder="Tên người nhận việc" style="flex:1 1 180px;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px" aria-label="Tên thành viên">
+      <button class="btn primary" type="submit">Thêm</button>
+    </div>
+    <div class="mlist" id="mlist"></div>
+    <div class="actions"><button class="btn" type="button" data-close>Đóng</button></div>
+  </form>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const STATUSES=[["To Do","Cần làm"],["In Progress","Đang làm"],["In Review","Chờ review"],["Done","Xong"]];
+const PRI_ORDER={High:0,Medium:1,Low:2};
+const COLORS=["#1d5fd1","#c2410c","#2f7d4f","#7c3aed","#b42318","#0e7490","#a16207","#be185d"];
+let tasks=[], members=[], db=null, readonly=false;
+let filt={who:"",q:"",pri:"",due:""}, editing=null;
+const $=id=>document.getElementById(id);
+
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+function initials(n){return n.trim().split(/\s+/).slice(-2).map(w=>w[0]).join("").toUpperCase()}
+function colorOf(id){let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return COLORS[h%COLORS.length]}
+function today(){const d=new Date();d.setHours(0,0,0,0);return d}
+function dueInfo(t){if(!t.due)return null;const d=new Date(t.due+"T00:00:00");const diff=Math.round((d-today())/864e5);return {d,diff,late:diff<0&&t.status!=="Done"}}
+function fmtDue(t){const i=dueInfo(t);if(!i)return"";const s=String(i.d.getDate()).padStart(2,"0")+"/"+String(i.d.getMonth()+1).padStart(2,"0");return i.late?s+" · trễ "+(-i.diff)+"n":s}
+function memberName(id){const m=members.find(m=>m.id===id);return m?m.name:""}
+
+/* ---------- data layer ---------- */
+const LS="teamTaskBoard.v1";
+function persistLocal(){try{localStorage.setItem(LS,JSON.stringify({tasks,members}))}catch{}}
+function loadLocal(){try{const d=JSON.parse(localStorage.getItem(LS)||"null");if(d){tasks=d.tasks||[];members=d.members||[]}}catch{}}
+async function save(col,id,data){
+  if(!db){ // local fallback
+    const arr=col==="tasks"?tasks:members;const i=arr.findIndex(x=>x.id===id);
+    if(i>=0)arr[i]={...data,id};else arr.push({...data,id});persistLocal();render();return;
+  }
+  try{await db.collection(col).doc(id).set(data)}catch(e){handleErr(e)}
+}
+async function remove(col,id){
+  if(!db){if(col==="tasks")tasks=tasks.filter(t=>t.id!==id);else members=members.filter(m=>m.id!==id);persistLocal();render();return}
+  try{await db.collection(col).doc(id).delete()}catch(e){handleErr(e)}
+}
+function handleErr(e){
+  if(e&&e.code==="invalid_argument"&&!readonly){readonly=true;showNotice("Bạn đang ở quyền chỉ xem nên không lưu được thay đổi. Nhờ chủ bảng cấp quyền Contributor.");render()}
+  else if(e&&e.code==="quota_exceeded")toast("Bảng đã đầy, hãy xoá bớt task cũ.");
+  else toast("Chưa lưu được, thử lại sau giây lát.");
+}
+function showNotice(t){$("notice").textContent=t;$("notice").hidden=false}
+function newId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function pick(t){const{ id, ...rest}=t;return rest}
+
+/* ---------- render ---------- */
+function visible(){
+  const q=filt.q.trim().toLowerCase();
+  return tasks.filter(t=>{
+    if(filt.who==="none"&&t.assignee)return false;
+    if(filt.who&&filt.who!=="none"&&t.assignee!==filt.who)return false;
+    if(filt.pri&&t.priority!==filt.pri)return false;
+    if(filt.due){const i=dueInfo(t);if(!i)return false;if(filt.due==="late"&&!i.late)return false;if(filt.due==="week"&&(i.diff<0||i.diff>7||t.status==="Done"))return false}
+    if(q&&!((t.key||"")+" "+t.title).toLowerCase().includes(q))return false;
+    return true});
+}
+function renderPeople(){
+  const host=$("people");host.innerHTML="";
+  const open=tasks.filter(t=>t.status!=="Done");
+  const mk=(id,name,avBg,avTxt)=>{
+    const mine=id==="none"?open.filter(t=>!t.assignee):open.filter(t=>t.assignee===id);
+    const late=mine.filter(t=>dueInfo(t)?.late).length;
+    const b=document.createElement("button");b.type="button";b.className="pchip";b.setAttribute("aria-pressed",filt.who===id);
+    b.innerHTML=`<span class="av"></span><span class="n"></span><span class="c">${mine.length} mở${late?` · <b>${late} trễ</b>`:""}</span>`;
+    b.querySelector(".av").style.background=avBg;b.querySelector(".av").textContent=avTxt;b.querySelector(".n").textContent=name;
+    b.onclick=()=>{filt.who=filt.who===id?"":id;render()};host.appendChild(b)};
+  members.slice().sort((a,b)=>a.name.localeCompare(b.name,"vi")).forEach(m=>mk(m.id,m.name,colorOf(m.id),initials(m.name)));
+  if(tasks.length)mk("none","Chưa giao","var(--muted)","?");
+  host.hidden=!host.children.length;
+}
+function card(t){
+  const el=document.createElement("article");el.className="card";el.draggable=!readonly;el.dataset.id=t.id;
+  const si=STATUSES.findIndex(s=>s[0]===t.status);
+  const keyEl=t.url?`<a class="key" target="_blank" rel="noopener"></a>`:`<span class="key"></span>`;
+  el.innerHTML=`<div class="row">${keyEl}<span class="pill p-${t.priority}">${t.priority}</span><span class="due"></span></div>
+  <div class="title"></div>
+  <div class="row"><div class="assign"><span class="av"></span><select aria-label="Giao cho"></select></div>
+  <button class="mv" type="button" data-d="-1" aria-label="Lùi trạng thái">‹</button><button class="mv" type="button" data-d="1" aria-label="Chuyển trạng thái tiếp">›</button></div>`;
+  const k=el.querySelector(".key");k.textContent=t.key||"—";if(t.url)k.href=t.url;
+  el.querySelector(".title").textContent=t.title;
+  const due=el.querySelector(".due");due.textContent=fmtDue(t);if(dueInfo(t)?.late)due.classList.add("late");
+  const av=el.querySelector(".av");
+  if(t.assignee&&memberName(t.assignee)){av.style.background=colorOf(t.assignee);av.textContent=initials(memberName(t.assignee))}else{av.style.background="var(--line)";av.textContent="?"}
+  const sel=el.querySelector("select");fillAssignee(sel,t.assignee);sel.disabled=readonly;
+  sel.onchange=()=>{const v=sel.value;save("tasks",t.id,{...pick(t),assignee:v,updatedAt:Date.now()});toast(v?"Đã giao cho "+memberName(v):"Đã bỏ phân công")};
+  el.querySelectorAll(".mv").forEach(b=>{const n=si+Number(b.dataset.d);b.disabled=readonly||n<0||n>=STATUSES.length;
+    b.onclick=()=>save("tasks",t.id,{...pick(t),status:STATUSES[n][0],updatedAt:Date.now()})});
+  el.querySelector(".title").onclick=()=>openTask(t);
+  el.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/plain",t.id);el.classList.add("dragging")});
+  el.addEventListener("dragend",()=>el.classList.remove("dragging"));
+  return el;
+}
+function fillAssignee(sel,val){
+  sel.innerHTML="";const o=new Option("— Chưa giao —","");sel.add(o);
+  members.slice().sort((a,b)=>a.name.localeCompare(b.name,"vi")).forEach(m=>sel.add(new Option(m.name,m.id)));
+  sel.value=val&&members.some(m=>m.id===val)?val:"";
+}
+function render(){
+  renderPeople();
+  const host=$("boardHost");host.innerHTML="";
+  const open=tasks.filter(t=>t.status!=="Done").length, late=tasks.filter(t=>dueInfo(t)?.late).length;
+  $("sub").textContent=tasks.length?`${tasks.length} task · ${open} đang mở${late?` · ${late} quá hạn`:""}`:"Theo dõi task Jira và phân công người làm";
+  $("btnNew").disabled=readonly;
+  if(!tasks.length){
+    host.innerHTML=`<div class="big-empty"><strong>Chưa có task nào</strong><p>Thêm thành viên trong team trước, rồi tạo task với mã Jira, hạn chót và người nhận việc. Mọi người mở link này sẽ thấy cùng một bảng.</p><div class="row"><button class="btn" type="button" id="e1">Thêm thành viên</button><button class="btn primary" type="button" id="e2">+ Tạo task đầu tiên</button></div></div>`;
+    $("e1").onclick=openPeople;$("e2").onclick=()=>openTask(null);$("e1").disabled=$("e2").disabled=readonly;return;
+  }
+  const v=visible();const board=document.createElement("div");board.className="board";
+  STATUSES.forEach(([s,label])=>{
+    const items=v.filter(t=>t.status===s).sort((a,b)=>(PRI_ORDER[a.priority]-PRI_ORDER[b.priority])||((a.due||"9")<(b.due||"9")?-1:1));
+    const lane=document.createElement("section");lane.className="lane";lane.dataset.s=s;
+    lane.innerHTML=`<h2>${label}<span>${items.length}</span></h2>`;
+    items.forEach(t=>lane.appendChild(card(t)));
+    if(!items.length){const p=document.createElement("div");p.className="empty-lane";p.textContent="Không có task";lane.appendChild(p)}
+    lane.addEventListener("dragover",e=>{if(readonly)return;e.preventDefault();lane.classList.add("over")});
+    lane.addEventListener("dragleave",()=>lane.classList.remove("over"));
+    lane.addEventListener("drop",e=>{e.preventDefault();lane.classList.remove("over");const id=e.dataTransfer.getData("text/plain");const t=tasks.find(x=>x.id===id);if(t&&t.status!==s)save("tasks",id,{...pick(t),status:s,updatedAt:Date.now()})});
+    board.appendChild(lane)});
+  host.appendChild(board);
+}
+
+/* ---------- modals ---------- */
+function openTask(t){
+  if(readonly&&!t)return;editing=t;
+  $("tmTitle").textContent=t?"Sửa task":"Tạo task";
+  const st=$("tStatus");st.innerHTML="";STATUSES.forEach(([v,l])=>st.add(new Option(l,v)));
+  fillAssignee($("tAssignee"),t?.assignee||(filt.who&&filt.who!=="none"?filt.who:""));
+  $("tKey").value=t?.key||"";$("tTitle").value=t?.title||"";$("tPri").value=t?.priority||"Medium";
+  st.value=t?.status||"To Do";$("tDue").value=t?.due||"";$("tUrl").value=t?.url||"";$("tNote").value=t?.note||"";
+  $("tDel").hidden=!t||readonly;$("tSave").hidden=readonly;
+  $("taskModal").hidden=false;$("tTitle").focus();
+}
+$("taskForm").onsubmit=e=>{
+  e.preventDefault();if(readonly)return;
+  const key=$("tKey").value.trim().toUpperCase();
+  let url=$("tUrl").value.trim();if(url&&!/^https?:\/\//i.test(url))url="";
+  const data={key,title:$("tTitle").value.trim(),priority:$("tPri").value,status:$("tStatus").value,assignee:$("tAssignee").value,due:$("tDue").value,url,note:$("tNote").value.trim(),updatedAt:Date.now(),createdAt:editing?.createdAt||Date.now()};
+  if(!data.title)return;
+  save("tasks",editing?.id||newId(),data);
+  $("taskModal").hidden=true;toast(editing?"Đã cập nhật task":"Đã tạo task");
+};
+let delArm=false;
+$("tDel").onclick=()=>{
+  if(!delArm){delArm=true;$("tDel").textContent="Bấm lần nữa để xoá";setTimeout(()=>{delArm=false;$("tDel").textContent="Xoá task"},3000);return}
+  delArm=false;$("tDel").textContent="Xoá task";remove("tasks",editing.id);$("taskModal").hidden=true;toast("Đã xoá task");
+};
+function openPeople(){renderMembers();$("peopleModal").hidden=false;$("pName").focus()}
+function renderMembers(){
+  const l=$("mlist");l.innerHTML="";
+  if(!members.length){l.innerHTML=`<div class="sub">Chưa có ai. Nhập tên từng người trong team để giao việc.</div>`;return}
+  members.slice().sort((a,b)=>a.name.localeCompare(b.name,"vi")).forEach(m=>{
+    const n=tasks.filter(t=>t.assignee===m.id&&t.status!=="Done").length;
+    const d=document.createElement("div");d.className="mitem";
+    d.innerHTML=`<span class="av"></span><span></span><span class="sub" style="flex:0 0 auto">${n} task mở</span><button class="btn ghost danger" type="button">Xoá</button>`;
+    d.querySelector(".av").style.background=colorOf(m.id);d.querySelector(".av").textContent=initials(m.name);
+    d.children[1].textContent=m.name;
+    const b=d.querySelector("button");b.disabled=readonly;
+    b.onclick=()=>{if(n&&b.dataset.arm!=="1"){b.dataset.arm="1";b.textContent=`Vẫn xoá? (${n} task sẽ thành chưa giao)`;return}
+      remove("members",m.id);tasks.filter(t=>t.assignee===m.id).forEach(t=>save("tasks",t.id,{...pick(t),assignee:""}))};
+    l.appendChild(d)});
+}
+$("peopleForm").onsubmit=e=>{e.preventDefault();if(readonly)return;const n=$("pName").value.trim();if(!n)return;
+  if(members.some(m=>m.name.toLowerCase()===n.toLowerCase())){toast("Tên này đã có");return}
+  save("members",newId(),{name:n,createdAt:Date.now()});$("pName").value="";};
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>b.closest(".scrim").hidden=true);
+document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("click",e=>{if(e.target===s)s.hidden=true}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".scrim").forEach(s=>s.hidden=true)});
+$("btnNew").onclick=()=>openTask(null);$("btnPeople").onclick=openPeople;
+$("q").oninput=e=>{filt.q=e.target.value;render()};
+$("fPri").onchange=e=>{filt.pri=e.target.value;render()};
+$("fDue").onchange=e=>{filt.due=e.target.value;render()};
+$("clearF").onclick=()=>{filt={who:"",q:"",pri:"",due:""};$("q").value="";$("fPri").value="";$("fDue").value="";render()};
+
+/* ---------- boot ---------- */
+if(!window.claude)loadLocal();
+render();
+(async()=>{
+  try{db=window.claude?await window.claude.use("db"):null}catch{db=null}
+  if(!db){if(window.claude){loadLocal();render()}showNotice("Dữ liệu đang lưu trên trình duyệt này. Người khác mở link sẽ thấy bảng riêng của họ.");return}
+  try{const u=await window.claude.use("user");if(u&&u.can){const c=await u.can("data.write");if(c===false){readonly=true;showNotice("Bạn đang xem ở quyền chỉ đọc.");render()}}}catch{}
+  const live=(col,assign)=>db.collection(col).onSnapshot(s=>{assign(s.docs.map(d=>({id:d.id,...d.data()})));render();if(!$("peopleModal").hidden)renderMembers()},e=>handleErr(e));
+  live("members",v=>members=v);
+  live("tasks",v=>tasks=v);
+})();
+</script>
+
+</body>
+</html>
